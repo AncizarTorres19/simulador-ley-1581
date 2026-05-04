@@ -178,14 +178,6 @@
       transition: border-color .2s;
     }
     .sim-input:focus { border-color: var(--cyan); }
-    .sim-input.invalid { border-color: var(--red); box-shadow: 0 0 0 1px rgba(248,113,113,.25); }
-
-    .field-error {
-      font-size: .78rem;
-      color: var(--red);
-      margin-top: .45rem;
-      min-height: 1.1rem;
-    }
 
     /* ──── ARCH DIAGRAM ──── */
     .arch-node {
@@ -281,12 +273,6 @@
       font-size: .95rem; letter-spacing: .02em;
     }
     .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
-    .btn-primary:disabled {
-      opacity: .45;
-      cursor: not-allowed;
-      transform: none;
-      filter: grayscale(.2);
-    }
     .btn-secondary {
       background: transparent; color: var(--cyan);
       border: 1px solid var(--cyan); font-weight: 600;
@@ -495,7 +481,7 @@
           <label class="block mb-1.5 text-xs font-semibold" style="color:var(--muted);letter-spacing:.06em;text-transform:uppercase;">Dirección del sitio</label>
           <div class="url-bar">
             <i id="url-lock-icon" class="fa-solid fa-lock-open lock"></i>
-            <span id="url-text" class="text-xs">http://unisistemas.edu.co/login</span>
+            <span id="url-text" class="text-xs">https://unisistemas.edu.co/login</span>
           </div>
           <!-- Hotspot URL -->
           <div id="hs-url" class="hotspot" style="top:-12px;right:-12px;" onclick="openHotspot('url')"></div>
@@ -517,13 +503,13 @@
 
         <!-- Login Button con hotspot -->
         <div style="position:relative;">
-          <button id="login-submit" class="btn-primary w-full" onclick="goToNext()" disabled>
+          <button id="login-submit" class="btn-primary w-full" onclick="goToNext()">
             <i class="fa-solid fa-right-to-bracket mr-2"></i>Ingresar al Sistema
           </button>
           <!-- Hotspot login btn (solo DEV) -->
           <div id="hs-login-btn" class="hotspot cyan" style="top:-12px;right:-12px;display:none;" onclick="openHotspot('loginbtn')"></div>
         </div>
-        <p id="login-validation-msg" class="field-error"></p>
+        <p id="login-validation-msg" class="text-xs mt-3" style="color:var(--muted);min-height:1.2rem;"></p>
       </div>
 
       <div class="text-center mt-4">
@@ -667,11 +653,11 @@ Host: unisistemas.edu.co
 
       <div class="flex justify-between items-center fade-up delay-3">
         <button class="btn-secondary" onclick="goToView(2)"><i class="fa-solid fa-arrow-left mr-1"></i>Volver</button>
-        <button id="view3-continue" class="btn-primary" onclick="goToDashboardFromArch()" disabled>
+        <button id="view3-continue" class="btn-primary" onclick="goToDashboardFromArch()">
           Continuar al Dashboard &nbsp;<i class="fa-solid fa-arrow-right"></i>
         </button>
       </div>
-      <p id="view3-hint" class="text-xs mt-3 text-right" style="color:var(--muted)">Revisa los 3 hotspots de arquitectura para habilitar el siguiente paso.</p>
+      <p id="view3-hint" class="text-xs mt-3 text-right" style="color:var(--muted)">Explora los hotspots del diagrama para profundizar en cada vulnerabilidad.</p>
     </div>
   </div>
 
@@ -1114,8 +1100,6 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
     }
 
     async function goToNext() {
-      if (!validateLoginStep(true)) return;
-
       if (currentRole === 'dev') {
         setupView3();
         await goToView(3);
@@ -1126,7 +1110,6 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
     }
 
     async function goToDashboardFromArch() {
-      if (!updateView3Gate()) return;
       setupView4();
       await goToView(4);
     }
@@ -1153,11 +1136,11 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
         hsBtn.style.display = 'flex';
       }
 
-      validateLoginStep(false);
+      updateHotspotHints();
     }
 
     function setupView3() {
-      updateView3Gate();
+      updateHotspotHints();
     }
 
     function setupView4() {
@@ -1193,67 +1176,50 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
       }
     }
 
-    function hasStep2Hotspots() {
-      if (currentRole === 'student') {
-        return viewedHotspots.has('url') && viewedHotspots.has('password');
+    /* ──── Hints informativos (no bloqueantes) ──── */
+    function updateHotspotHints() {
+      if (currentView === 2) {
+        const msg = document.getElementById('login-validation-msg');
+        if (!msg) return;
+        if (currentRole === 'student') {
+          const urlSeen = viewedHotspots.has('url');
+          const pwdSeen = viewedHotspots.has('password');
+          if (!urlSeen && !pwdSeen) {
+            msg.textContent = 'Explora los hotspots para aprender sobre seguridad antes de continuar.';
+            msg.style.color = 'var(--muted)';
+          } else if (!urlSeen || !pwdSeen) {
+            msg.textContent = 'Bien. Te queda ' + (!urlSeen ? 'el hotspot de la URL.' : 'el hotspot de contraseña.');
+            msg.style.color = 'var(--amber)';
+          } else {
+            msg.textContent = '¡Revisaste todos los puntos clave de esta pantalla!';
+            msg.style.color = 'var(--green)';
+          }
+        } else {
+          if (!viewedHotspots.has('loginbtn')) {
+            msg.textContent = 'Explora el hotspot de transmisión de credenciales para conocer las obligaciones técnicas.';
+            msg.style.color = 'var(--muted)';
+          } else {
+            msg.textContent = '¡Hotspot revisado! Ya conoces las obligaciones del Art. 17.';
+            msg.style.color = 'var(--green)';
+          }
+        }
       }
 
-      return viewedHotspots.has('loginbtn');
-    }
-
-    function validateLoginStep(showErrors) {
-      const emailInput = document.getElementById('login-email');
-      const passwordInput = document.getElementById('login-password');
-      const submitBtn = document.getElementById('login-submit');
-      const msg = document.getElementById('login-validation-msg');
-
-      const email = (emailInput.value || '').trim();
-      const password = passwordInput.value || '';
-
-      if (!currentRole) {
-        emailInput.classList.remove('invalid');
-        passwordInput.classList.remove('invalid');
-        submitBtn.disabled = true;
-        msg.textContent = '';
-        return false;
+      if (currentView === 3) {
+        const hint = document.getElementById('view3-hint');
+        if (!hint) return;
+        const reviewed = ['jsonplain', 'env', 'jsonhash'].filter(k => viewedHotspots.has(k)).length;
+        if (reviewed === 0) {
+          hint.textContent = 'Explora los hotspots del diagrama para profundizar en cada vulnerabilidad.';
+          hint.style.color = 'var(--muted)';
+        } else if (reviewed < 3) {
+          hint.textContent = `Revisaste ${reviewed} de 3 hotspots. ¡Sigue explorando!`;
+          hint.style.color = 'var(--amber)';
+        } else {
+          hint.textContent = 'Excelente. Revisaste los 3 puntos clave de arquitectura.';
+          hint.style.color = 'var(--green)';
+        }
       }
-
-      const institutionalEmail = /^[^\s@]+@unisistemas\.edu\.co$/i.test(email);
-      const securePassword = password.length >= 8;
-      const hotspotDone = hasStep2Hotspots();
-
-      emailInput.classList.toggle('invalid', showErrors && !institutionalEmail);
-      passwordInput.classList.toggle('invalid', showErrors && !securePassword);
-
-      if (!institutionalEmail) {
-        msg.textContent = 'Usa un correo institucional @unisistemas.edu.co para continuar.';
-      } else if (!securePassword) {
-        msg.textContent = 'La contraseña debe tener al menos 8 caracteres.';
-      } else if (!hotspotDone) {
-        msg.textContent = currentRole === 'student'
-          ? 'Antes de continuar revisa los hotspots de URL y contraseña.'
-          : 'Antes de continuar revisa el hotspot de transmisión de credenciales.';
-      } else {
-        msg.textContent = '';
-      }
-
-      const valid = institutionalEmail && securePassword && hotspotDone;
-      submitBtn.disabled = !valid;
-      return valid;
-    }
-
-    function updateView3Gate() {
-      const continueBtn = document.getElementById('view3-continue');
-      const hint = document.getElementById('view3-hint');
-      const reviewed = ['jsonplain', 'env', 'jsonhash'].every(key => viewedHotspots.has(key));
-
-      continueBtn.disabled = !reviewed;
-      hint.style.color = reviewed ? 'var(--green)' : 'var(--muted)';
-      hint.textContent = reviewed
-        ? 'Excelente. Ya revisaste los 3 hotspots de arquitectura y puedes continuar.'
-        : 'Revisa los 3 hotspots de arquitectura para habilitar el siguiente paso.';
-
-      return reviewed;
     }
 
     /* ──── Modal ──── */
@@ -1277,8 +1243,7 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
       header.style.background = colors[h.tag.cls] || '';
 
       document.getElementById('modal-overlay').classList.add('open');
-      validateLoginStep(false);
-      updateView3Gate();
+      updateHotspotHints();
     }
 
     function closeModal(e) {
@@ -1330,14 +1295,7 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
     /* ── Esc para cerrar modal ── */
     document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
 
-    const loginEmail = document.getElementById('login-email');
-    const loginPassword = document.getElementById('login-password');
-    loginEmail.addEventListener('input', () => validateLoginStep(false));
-    loginPassword.addEventListener('input', () => validateLoginStep(false));
-    loginEmail.addEventListener('blur', () => validateLoginStep(true));
-    loginPassword.addEventListener('blur', () => validateLoginStep(true));
     setView(1);
-    validateLoginStep(false);
 
     /* ── Hotspot verde no tiene animación CSS, la agrego JS ── */
     const hsGreen = document.getElementById('hs-json-hash');
