@@ -29,9 +29,9 @@
       color: var(--text);
       font-family: 'DM Sans', sans-serif;
       margin: 0;
-      min-height: 100vh;
+      height: 100vh;
       overflow-x: hidden;
-      padding-bottom: 3rem; /* Espacio para el footer */
+      overflow-y: hidden;
     }
 
     h1, h2, h3, h4 { font-family: 'Syne', sans-serif; }
@@ -51,7 +51,15 @@
     }
 
     /* ──── VIEWS ──── */
-    .view { display: none; position: relative; z-index: 1; }
+    .view {
+      display: none;
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 5.2rem;
+    }
     .view.active { display: block; }
 
     /* ──── CARD ──── */
@@ -170,6 +178,14 @@
       transition: border-color .2s;
     }
     .sim-input:focus { border-color: var(--cyan); }
+    .sim-input.invalid { border-color: var(--red); box-shadow: 0 0 0 1px rgba(248,113,113,.25); }
+
+    .field-error {
+      font-size: .78rem;
+      color: var(--red);
+      margin-top: .45rem;
+      min-height: 1.1rem;
+    }
 
     /* ──── ARCH DIAGRAM ──── */
     .arch-node {
@@ -265,6 +281,12 @@
       font-size: .95rem; letter-spacing: .02em;
     }
     .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-primary:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none;
+      filter: grayscale(.2);
+    }
     .btn-secondary {
       background: transparent; color: var(--cyan);
       border: 1px solid var(--cyan); font-weight: 600;
@@ -290,6 +312,41 @@
     .delay-3 { animation-delay: .3s; opacity:0; }
 
     .glow-text { text-shadow: 0 0 20px rgba(34,211,238,.4); }
+
+    /* ──── STEP LOADER ──── */
+    #step-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(7,9,15,.74);
+      backdrop-filter: blur(5px);
+    }
+    #step-loader.open { display: flex; }
+    .loader-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: .85rem;
+      box-shadow: 0 8px 40px rgba(0,0,0,.45);
+    }
+    .loader-spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(34,211,238,.28);
+      border-top-color: var(--cyan);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -315,11 +372,18 @@
     </div>
   </div>
 
+  <div id="step-loader" aria-hidden="true">
+    <div class="loader-card">
+      <span class="loader-spinner"></span>
+      <span id="step-loader-text" class="text-sm" style="color:var(--text);font-weight:600;">Cargando siguiente paso...</span>
+    </div>
+  </div>
+
   <!-- ═══════════════════════════════════════════════
        VISTA 1 – SELECCIÓN DE ROL
   ═══════════════════════════════════════════════ -->
-  <div id="view-1" class="view active min-h-screen flex flex-col items-center justify-center p-6">
-    <div class="max-w-3xl w-full">
+  <div id="view-1" class="view active min-h-screen flex flex-col items-center justify-center p-6" data-display="flex">
+    <div class="max-w-3xl w-full mx-auto">
 
       <!-- Logo área -->
       <div class="text-center mb-10 fade-up">
@@ -394,7 +458,7 @@
   <!-- ═══════════════════════════════════════════════
        VISTA 2 – LOGIN SIMULADO
   ═══════════════════════════════════════════════ -->
-  <div id="view-2" class="view min-h-screen flex flex-col p-6">
+  <div id="view-2" class="view min-h-screen flex flex-col p-6" data-display="flex">
     <div class="max-w-xl mx-auto w-full mt-8">
 
       <!-- Breadcrumb + Steps -->
@@ -440,29 +504,26 @@
         <!-- Email -->
         <div class="mb-4">
           <label class="block mb-1.5 text-xs font-semibold" style="color:var(--muted);letter-spacing:.06em;text-transform:uppercase;">Correo Institucional</label>
-          <input class="sim-input" type="email" placeholder="estudiante@unisistemas.edu.co" value="j.rodriguez@unisistemas.edu.co"/>
+          <input id="login-email" class="sim-input" type="email" placeholder="estudiante@unisistemas.edu.co" value="j.rodriguez@unisistemas.edu.co"/>
         </div>
 
         <!-- Password con hotspot -->
         <div class="mb-6" style="position:relative;">
           <label class="block mb-1.5 text-xs font-semibold" style="color:var(--muted);letter-spacing:.06em;text-transform:uppercase;">Contraseña</label>
-          <input class="sim-input" type="password" placeholder="••••••••" value="MiClave2024"/>
+          <input id="login-password" class="sim-input" type="password" placeholder="••••••••" value="MiClave2024"/>
           <!-- Hotspot password -->
           <div id="hs-password" class="hotspot" style="top:-12px;right:-12px;" onclick="openHotspot('password')"></div>
         </div>
 
         <!-- Login Button con hotspot -->
         <div style="position:relative;">
-          <button class="btn-primary w-full" onclick="goToNext()">
+          <button id="login-submit" class="btn-primary w-full" onclick="goToNext()" disabled>
             <i class="fa-solid fa-right-to-bracket mr-2"></i>Ingresar al Sistema
           </button>
           <!-- Hotspot login btn (solo DEV) -->
           <div id="hs-login-btn" class="hotspot cyan" style="top:-12px;right:-12px;display:none;" onclick="openHotspot('loginbtn')"></div>
         </div>
-
-        <div class="mt-4 text-center">
-          <span class="text-xs" style="color:var(--muted)">¿Olvidaste tu contraseña? <span style="color:var(--cyan);cursor:pointer;">Recuperar acceso</span></span>
-        </div>
+        <p id="login-validation-msg" class="field-error"></p>
       </div>
 
       <div class="text-center mt-4">
@@ -476,7 +537,7 @@
   <!-- ═══════════════════════════════════════════════
        VISTA 3 – ARQUITECTURA (Solo DEV)
   ═══════════════════════════════════════════════ -->
-  <div id="view-3" class="view min-h-screen p-6">
+  <div id="view-3" class="view min-h-screen p-6" data-display="block">
     <div class="max-w-4xl mx-auto">
 
       <div class="breadcrumb mb-4 fade-up">
@@ -606,17 +667,18 @@ Host: unisistemas.edu.co
 
       <div class="flex justify-between items-center fade-up delay-3">
         <button class="btn-secondary" onclick="goToView(2)"><i class="fa-solid fa-arrow-left mr-1"></i>Volver</button>
-        <button class="btn-primary" onclick="goToView(4)">
+        <button id="view3-continue" class="btn-primary" onclick="goToDashboardFromArch()" disabled>
           Continuar al Dashboard &nbsp;<i class="fa-solid fa-arrow-right"></i>
         </button>
       </div>
+      <p id="view3-hint" class="text-xs mt-3 text-right" style="color:var(--muted)">Revisa los 3 hotspots de arquitectura para habilitar el siguiente paso.</p>
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════
        VISTA 4 – DASHBOARD / PERFIL
   ═══════════════════════════════════════════════ -->
-  <div id="view-4" class="view min-h-screen p-6">
+  <div id="view-4" class="view min-h-screen p-6" data-display="block">
     <div class="max-w-3xl mx-auto">
 
       <div class="breadcrumb mb-4 fade-up">
@@ -788,6 +850,7 @@ Host: unisistemas.edu.co
     /* ── State ── */
     let currentRole = null;   // 'student' | 'dev'
     let currentView = 1;
+    const viewedHotspots = new Set();
 
     /* ── Hotspot data ── */
     const hotspots = {
@@ -1014,34 +1077,63 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
     };
 
     /* ──── Navegación ──── */
-    function goToView(n) {
-      document.getElementById(`view-${currentView}`).classList.remove('active');
+    function setView(n) {
       currentView = n;
-      document.getElementById(`view-${n}`).classList.add('active');
-      window.scrollTo(0,0);
+      const allViews = document.querySelectorAll('.view');
+      allViews.forEach(view => {
+        const active = view.id === `view-${n}`;
+        view.classList.toggle('active', active);
+        view.style.display = active ? (view.dataset.display || 'block') : 'none';
+      });
+      document.getElementById(`view-${n}`).scrollTop = 0;
+      closeModal();
     }
 
-    function selectRole(role) {
+    function showStepLoader(text) {
+      document.getElementById('step-loader-text').textContent = text || 'Cargando siguiente paso...';
+      document.getElementById('step-loader').classList.add('open');
+    }
+
+    function hideStepLoader() {
+      document.getElementById('step-loader').classList.remove('open');
+    }
+
+    async function goToView(n) {
+      if (n === currentView) return;
+      const direction = n > currentView ? 'Avanzando al siguiente paso...' : 'Regresando al paso anterior...';
+      showStepLoader(direction);
+      await new Promise(resolve => setTimeout(resolve, 550));
+      setView(n);
+      hideStepLoader();
+    }
+
+    async function selectRole(role) {
       currentRole = role;
       setupView2();
-      goToView(2);
+      await goToView(2);
     }
 
-    function goToNext() {
+    async function goToNext() {
+      if (!validateLoginStep(true)) return;
+
       if (currentRole === 'dev') {
         setupView3();
-        goToView(3);
+        await goToView(3);
       } else {
         setupView4();
-        goToView(4);
+        await goToView(4);
       }
+    }
+
+    async function goToDashboardFromArch() {
+      if (!updateView3Gate()) return;
+      setupView4();
+      await goToView(4);
     }
 
     /* ──── Setup vistas según rol ──── */
     function setupView2() {
       const badge = document.getElementById('login-role-badge');
-      const urlIcon = document.getElementById('url-lock-icon');
-      const urlText = document.getElementById('url-text');
       const hsUrl = document.getElementById('hs-url');
       const hsPwd = document.getElementById('hs-password');
       const hsBtn = document.getElementById('hs-login-btn');
@@ -1060,10 +1152,12 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
         hsPwd.style.display = 'none';
         hsBtn.style.display = 'flex';
       }
+
+      validateLoginStep(false);
     }
 
     function setupView3() {
-      // Vista 3 solo para dev — nada extra que configurar
+      updateView3Gate();
     }
 
     function setupView4() {
@@ -1099,10 +1193,75 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
       }
     }
 
+    function hasStep2Hotspots() {
+      if (currentRole === 'student') {
+        return viewedHotspots.has('url') && viewedHotspots.has('password');
+      }
+
+      return viewedHotspots.has('loginbtn');
+    }
+
+    function validateLoginStep(showErrors) {
+      const emailInput = document.getElementById('login-email');
+      const passwordInput = document.getElementById('login-password');
+      const submitBtn = document.getElementById('login-submit');
+      const msg = document.getElementById('login-validation-msg');
+
+      const email = (emailInput.value || '').trim();
+      const password = passwordInput.value || '';
+
+      if (!currentRole) {
+        emailInput.classList.remove('invalid');
+        passwordInput.classList.remove('invalid');
+        submitBtn.disabled = true;
+        msg.textContent = '';
+        return false;
+      }
+
+      const institutionalEmail = /^[^\s@]+@unisistemas\.edu\.co$/i.test(email);
+      const securePassword = password.length >= 8;
+      const hotspotDone = hasStep2Hotspots();
+
+      emailInput.classList.toggle('invalid', showErrors && !institutionalEmail);
+      passwordInput.classList.toggle('invalid', showErrors && !securePassword);
+
+      if (!institutionalEmail) {
+        msg.textContent = 'Usa un correo institucional @unisistemas.edu.co para continuar.';
+      } else if (!securePassword) {
+        msg.textContent = 'La contraseña debe tener al menos 8 caracteres.';
+      } else if (!hotspotDone) {
+        msg.textContent = currentRole === 'student'
+          ? 'Antes de continuar revisa los hotspots de URL y contraseña.'
+          : 'Antes de continuar revisa el hotspot de transmisión de credenciales.';
+      } else {
+        msg.textContent = '';
+      }
+
+      const valid = institutionalEmail && securePassword && hotspotDone;
+      submitBtn.disabled = !valid;
+      return valid;
+    }
+
+    function updateView3Gate() {
+      const continueBtn = document.getElementById('view3-continue');
+      const hint = document.getElementById('view3-hint');
+      const reviewed = ['jsonplain', 'env', 'jsonhash'].every(key => viewedHotspots.has(key));
+
+      continueBtn.disabled = !reviewed;
+      hint.style.color = reviewed ? 'var(--green)' : 'var(--muted)';
+      hint.textContent = reviewed
+        ? 'Excelente. Ya revisaste los 3 hotspots de arquitectura y puedes continuar.'
+        : 'Revisa los 3 hotspots de arquitectura para habilitar el siguiente paso.';
+
+      return reviewed;
+    }
+
     /* ──── Modal ──── */
     function openHotspot(key) {
       const h = hotspots[key];
       if (!h) return;
+
+      viewedHotspots.add(key);
 
       document.getElementById('modal-icon').textContent = h.icon;
       document.getElementById('modal-title').textContent = h.title;
@@ -1118,6 +1277,8 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
       header.style.background = colors[h.tag.cls] || '';
 
       document.getElementById('modal-overlay').classList.add('open');
+      validateLoginStep(false);
+      updateView3Gate();
     }
 
     function closeModal(e) {
@@ -1168,6 +1329,15 @@ app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req
 
     /* ── Esc para cerrar modal ── */
     document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+    const loginEmail = document.getElementById('login-email');
+    const loginPassword = document.getElementById('login-password');
+    loginEmail.addEventListener('input', () => validateLoginStep(false));
+    loginPassword.addEventListener('input', () => validateLoginStep(false));
+    loginEmail.addEventListener('blur', () => validateLoginStep(true));
+    loginPassword.addEventListener('blur', () => validateLoginStep(true));
+    setView(1);
+    validateLoginStep(false);
 
     /* ── Hotspot verde no tiene animación CSS, la agrego JS ── */
     const hsGreen = document.getElementById('hs-json-hash');
